@@ -1,0 +1,82 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Default Deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helpers
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    // Entity Validations
+    function isValidUser(data) {
+      return data.keys().hasAll(['email']) &&
+             data.email is string && data.email.size() <= 256;
+    }
+
+    function isValidTransaction(data) {
+      return data.keys().hasAll(['amount', 'category', 'description', 'date', 'type', 'paymentMethod', 'userId']) &&
+             data.amount is number && data.amount > 0 &&
+             data.category is string && data.category.size() <= 50 &&
+             data.description is string && data.description.size() <= 200 &&
+             data.date is string &&
+             data.type in ['income', 'expense'] &&
+             data.paymentMethod in ['Cash', 'UPI', 'Card'] &&
+             data.userId == request.auth.uid;
+    }
+
+    function isValidBudget(data) {
+      return data.keys().hasAll(['category', 'limit', 'spent', 'month', 'userId']) &&
+             data.category is string && data.category.size() <= 50 &&
+             data.limit is number && data.limit >= 0 &&
+             data.spent is number &&
+             data.month is string &&
+             data.userId == request.auth.uid;
+    }
+
+    // Match Groups
+    match /users/{userId} {
+      allow get: if isOwner(userId);
+      allow create: if isOwner(userId) && isValidUser(incoming());
+      allow update: if isOwner(userId) && isValidUser(incoming()) && 
+                    incoming().diff(existing()).affectedKeys().hasOnly(['displayName', 'photoURL']);
+
+      match /transactions/{transactionId} {
+        allow list: if isOwner(userId);
+        allow get: if isOwner(userId);
+        allow create: if isOwner(userId) && isValidTransaction(incoming());
+        allow update: if isOwner(userId) && isValidTransaction(incoming()) &&
+                      incoming().diff(existing()).affectedKeys().hasOnly(['amount', 'category', 'description', 'date', 'type', 'paymentMethod']);
+        allow delete: if isOwner(userId);
+      }
+
+      match /budgets/{budgetId} {
+        allow list: if isOwner(userId);
+        allow get: if isOwner(userId);
+        allow create: if isOwner(userId) && isValidBudget(incoming());
+        allow update: if isOwner(userId) && isValidBudget(incoming()) &&
+                      incoming().diff(existing()).affectedKeys().hasOnly(['limit', 'spent']);
+        allow delete: if isOwner(userId);
+      }
+    }
+  }
+}

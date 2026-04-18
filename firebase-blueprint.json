@@ -1,0 +1,59 @@
+{
+  "entities": {
+    "Transaction": {
+      "title": "Transaction",
+      "description": "A financial transaction representing income or expense",
+      "type": "object",
+      "properties": {
+        "amount": { "type": "number", "description": "Transaction amount" },
+        "category": { "type": "string", "description": "Transaction category" },
+        "description": { "type": "string", "description": "Short description of the transaction" },
+        "date": { "type": "string", "format": "date-time", "description": "Date of transaction" },
+        "type": { "type": "string", "enum": ["income", "expense"], "description": "Type of transaction" },
+        "paymentMethod": { "type": "string", "enum": ["Cash", "UPI", "Card"], "description": "Method of payment" },
+        "userId": { "type": "string", "description": "ID of the user who owns this transaction" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["amount", "category", "description", "date", "type", "paymentMethod", "userId"]
+    },
+    "Budget": {
+      "title": "Budget",
+      "description": "A monthly budget limit for a specific category",
+      "type": "object",
+      "properties": {
+        "category": { "type": "string", "description": "Budget category" },
+        "limit": { "type": "number", "description": "Maximum spending limit" },
+        "spent": { "type": "number", "description": "Current spending amount" },
+        "month": { "type": "string", "description": "Month in YYYY-MM format" },
+        "userId": { "type": "string", "description": "Owner ID" }
+      },
+      "required": ["category", "limit", "spent", "month", "userId"]
+    },
+    "User": {
+      "title": "User",
+      "description": "User profile information",
+      "type": "object",
+      "properties": {
+        "displayName": { "type": "string" },
+        "email": { "type": "string" },
+        "photoURL": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["email"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "User profiles"
+    },
+    "/users/{userId}/transactions/{transactionId}": {
+      "schema": "Transaction",
+      "description": "User transactions"
+    },
+    "/users/{userId}/budgets/{budgetId}": {
+      "schema": "Budget",
+      "description": "User budgets"
+    }
+  }
+}
